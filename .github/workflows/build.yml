@@ -1,0 +1,27 @@
+name: Build APK
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare official Android toolchain
+        shell: pwsh
+        run: .\PrepareBuild.ps1
+      - name: Compile and verify APK
+        shell: pwsh
+        run: .\Build.ps1
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: QuietHome-test-apk
+          path: dist/QuietHome.apk
+          if-no-files-found: error

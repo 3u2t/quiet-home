@@ -1,0 +1,31 @@
+# Local Android toolchain and signing material
+.tools/
+*.jks
+*.keystore
+*.p12
+*signing-password*
+
+# Build output
+dist/
+*.apk
+*.idsig
+
+# Personal media and device data must never be committed
+*.mp4
+*.mkv
+*.webm
+*.mov
+*.avi
+prepared-media/
+Screensaver/
+app/assets/wallpapers/
+FireTV-Run-*/
+screenshots/
+diagnostics/
+*.log
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

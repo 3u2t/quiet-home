@@ -1,0 +1,12 @@
+Quiet Home license
+
+Copyright (C) 2026 3u2t
+
+Noncommercial use, study, modification, contribution, and redistribution are allowed under the PolyForm Noncommercial License 1.0.0.
+
+Selling Quiet Home, paid redistribution, commercial use, or use with an anticipated commercial application requires separate written permission from the copyright holder.
+
+Full terms:
+https://polyformproject.org/licenses/noncommercial/1.0.0
+
+This public build contains no bundled photos or videos. Personal backgrounds and screensaver media stay on the user's TV and are not uploaded by Quiet Home.
