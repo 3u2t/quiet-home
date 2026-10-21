@@ -1,0 +1,19 @@
+name: One-time privacy cleanup
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  delete-old-run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete the superseded workflow run and its artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OLD_RUN_ID: "39599189196"
+        run: gh api --method DELETE "/repos/${GITHUB_REPOSITORY}/actions/runs/${OLD_RUN_ID}"
