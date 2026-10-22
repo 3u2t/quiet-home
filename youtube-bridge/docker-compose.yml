@@ -1,0 +1,27 @@
+services:
+  quiet-home-youtube:
+    build: .
+    container_name: quiet-home-youtube
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,mode=1777
+    environment:
+      PORT: "8787"
+      DATA_DIR: /app/data
+      HISTORY_LIMIT: "18"
+      MAX_HISTORY_PAGES: "2"
+      MAX_ACCOUNT_INDICES: "3"
+      MAX_PROFILE_ATTEMPTS: "12"
+      CACHE_SECONDS: "300"
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./data:/app/data:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8787/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s

@@ -1,0 +1,17 @@
+{
+  "name": "quiet-home-youtube-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Private LAN bridge from a YouTube watch history to Quiet Home",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test history-parser.test.mjs"
+  },
+  "dependencies": {
+    "youtubei.js": "18.2.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -5,7 +5,7 @@ $ErrorActionPreference = 'Stop'
 if ([string]::IsNullOrWhiteSpace($ToolsDirectory)) { $ToolsDirectory = Join-Path $PSScriptRoot '.tools\android-toolchain' }
 $tools = [IO.Path]::GetFullPath($ToolsDirectory)
 $configPath = Join-Path $tools 'toolchain.json'
-if (-not (Test-Path -LiteralPath $configPath)) { throw 'Run FireTV-PrepareBuild.ps1 first. This build runs offline.' }
+if (-not (Test-Path -LiteralPath $configPath)) { throw 'Run PrepareBuild.ps1 first. This build runs offline.' }
 $config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
 $java = Join-Path $config.javaBin 'java.exe'
 $javac = Join-Path $config.javaBin 'javac.exe'

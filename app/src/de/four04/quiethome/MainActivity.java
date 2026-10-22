@@ -61,12 +61,14 @@ public final class MainActivity extends Activity {
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
         prefs = getSharedPreferences("quiet", MODE_PRIVATE);
+        acceptYouTubeConfig(getIntent(), false);
+        diagnosticMode=getIntent().getBooleanExtra("diagnostic",false);
         dock.addAll(Arrays.asList(prefs.getString("dock",TextUtils.join(",",DEFAULT_DOCK)).split(",")));
         dock.removeAll(Collections.singleton(""));
         getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-        root = new FrameLayout(this); root.setBackgroundColor(0xff152b32); setContentView(root);
+        root = new FrameLayout(this); root.setBackgroundColor(0xff000000); setContentView(root);
         backgroundVideo=new QuietVideoView(this,"home-background");backgroundVideo.setVisibility(View.GONE);root.addView(backgroundVideo,new FrameLayout.LayoutParams(-1,-1));
-        background = new ImageView(this); background.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        background = new ImageView(this); background.setScaleType(ImageView.ScaleType.FIT_CENTER);background.setBackgroundColor(0xff000000);
         root.addView(background,new FrameLayout.LayoutParams(-1,-1));
         View tint = new View(this);
         tint.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x6606090d,0x1106090d,0xdd06090d}));
@@ -104,6 +106,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent); setIntent(intent);
+        acceptYouTubeConfig(intent, true);
         loadBackgroundEntries();
         diagnosticMode=intent.getBooleanExtra("diagnostic",false);
         if(settingsDialog!=null)settingsDialog.dismiss();
@@ -121,6 +124,7 @@ public final class MainActivity extends Activity {
         if("inputs".equals(requested))main.post(this::inputSettings);
         if("wallpapers".equals(requested))main.post(this::wallpaperSettings);
         if("screensaver".equals(requested))main.post(this::screensaverSettings);
+        if("youtube".equals(requested))main.post(this::youtubeSettings);
     }
     @Override protected void onResume() {
         super.onResume(); visible=true;
@@ -240,9 +244,9 @@ public final class MainActivity extends Activity {
         LinearLayout layout=vertical();body.addView(layout,new FrameLayout.LayoutParams(-1,-1));
         TextView title=text("Weiterschauen",26,WHITE);title.setPadding(dp(3),dp(6),0,dp(8));layout.addView(title);
         if(resume.items.isEmpty()){
-            TextView empty=text("Hier erscheinen deine freigegebenen Filme und Serien.",18,WHITE);empty.setPadding(dp(3),dp(14),0,dp(8));layout.addView(empty);
+            TextView empty=text("Hier erscheinen deine angefangenen Filme, Serien und YouTube-Videos.",18,WHITE);empty.setPadding(dp(3),dp(14),0,dp(8));layout.addView(empty);
             TextView explanation=text(resume.providerStatus+"\n\nOptionaler Medienverlauf kann Titel aus unterstützten Apps ab jetzt lokal merken. Er synchronisiert keine vollständigen Netflix-, Disney+- oder Paramount+-Konten.",13,MUTED);explanation.setMaxWidth(dp(640));explanation.setPadding(dp(3),0,0,dp(16));layout.addView(explanation);
-            TextView setup=text("Medienverlauf einrichten",14,WHITE);setup.setGravity(Gravity.CENTER);setup.setPadding(dp(18),dp(10),dp(18),dp(10));focusStyle(setup);setup.setOnClickListener(v->mediaAccess());layout.addView(setup,new LinearLayout.LayoutParams(-2,-2));firstCard=setup;
+            TextView setup=text("YouTube-Verlauf einrichten",14,WHITE);setup.setGravity(Gravity.CENTER);setup.setPadding(dp(18),dp(10),dp(18),dp(10));focusStyle(setup);setup.setOnClickListener(v->youtubeSettings());layout.addView(setup,new LinearLayout.LayoutParams(-2,-2));firstCard=setup;
             return;
         }
         TextView info=text("Fortsetzen = Wiedergabelink   ·   App öffnen = zuletzt erkannter Titel, ohne garantierten Episodensprung",11,MUTED);info.setPadding(dp(3),0,0,dp(14));layout.addView(info);
@@ -254,14 +258,15 @@ public final class MainActivity extends Activity {
             ImageView art=new ImageView(this);art.setScaleType(ImageView.ScaleType.CENTER_CROP);art.setBackgroundColor(0xff1b343b);tile.addView(art,new LinearLayout.LayoutParams(-1,dp(86)));
             App app=find(item.pkg);if(app!=null && app.icon!=null)art.setImageDrawable(app.icon);loadArt(item.art,art);
             TextView name=text(item.title,15,WHITE);name.setSingleLine();name.setEllipsize(TextUtils.TruncateAt.END);name.setPadding(0,dp(9),0,0);tile.addView(name);
-            TextView service=text(appName(item.pkg)+" · "+(item.direct?"Fortsetzen":"App öffnen"),10,MUTED);service.setSingleLine();service.setEllipsize(TextUtils.TruncateAt.END);tile.addView(service);
+            String itemSource=item.source==null||item.source.isEmpty()?appName(item.pkg):item.source;
+            TextView service=text(itemSource+" · "+(item.direct?"Fortsetzen":"App öffnen"),10,MUTED);service.setSingleLine();service.setEllipsize(TextUtils.TruncateAt.END);tile.addView(service);
             if(item.duration>0){ProgressBar progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);progress.setMax(1000);progress.setProgress((int)Math.min(1000,1000.0*item.position/item.duration));tile.addView(progress,new LinearLayout.LayoutParams(-1,dp(8)));}
             tile.setOnClickListener(v->resumeItem(item));tile.setContentDescription(item.title+", "+appName(item.pkg));if(firstCard==null)firstCard=tile;
         }
     }
     private void resumeItem(ResumeStore.Item item){
         if(item.direct){
-            try{Intent intent=Intent.parseUri(item.uri,Intent.URI_INTENT_SCHEME);intent.setSelector(null);intent.setComponent(null);intent.setPackage(item.pkg);intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);if(intent.resolveActivity(getPackageManager())!=null){startActivity(intent);return;}}
+            try{Intent intent=item.uri.startsWith("https://")||item.uri.startsWith("http://")?new Intent(Intent.ACTION_VIEW,Uri.parse(item.uri)):Intent.parseUri(item.uri,Intent.URI_INTENT_SCHEME);intent.setSelector(null);intent.setComponent(null);intent.setPackage(item.pkg);intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);if(intent.resolveActivity(getPackageManager())!=null){startActivity(intent);return;}intent.setPackage(null);if(intent.resolveActivity(getPackageManager())!=null){startActivity(intent);return;}}
             catch(Exception ignored){}
         }
         if(item.activity!=null){try{item.activity.send();return;}catch(PendingIntent.CanceledException ignored){}}
@@ -301,7 +306,7 @@ public final class MainActivity extends Activity {
     private void nextWallpaper(){if(backgrounds.isEmpty())return;wallpaperIndex=(wallpaperIndex+1)%backgrounds.size();prefs.edit().putInt("wallpaperIndex",wallpaperIndex).apply();showWallpaper(wallpaperIndex);}
     private void showWallpaper(int index){
         if(backgrounds.isEmpty())return;main.removeCallbacks(rotate);final int token=++wallpaperGeneration;final BackgroundEntry entry=backgrounds.get(Math.floorMod(index,backgrounds.size()));
-        backgroundVideo.stop();backgroundVideo.setVisibility(View.GONE);background.setVisibility(View.VISIBLE);
+        backgroundVideo.stop();backgroundVideo.setVisibility(View.GONE);background.setVisibility(View.VISIBLE);root.setBackgroundColor(0xff000000);
         if(entry.video){
             backgroundVideo.setVisibility(View.VISIBLE);
             backgroundVideo.play(entry.file.getAbsolutePath(),backgrounds.size()==1,true,()->{if(!visible||token!=wallpaperGeneration)return;backgroundVideo.setVisibility(View.VISIBLE);background.setVisibility(View.GONE);},()->{backgroundVideo.setVisibility(View.GONE);if(visible&&token==wallpaperGeneration)main.postDelayed(rotate,500);},()->{android.util.Log.w("QuietHome","Background video failed: "+entry.name);backgroundVideo.setVisibility(View.GONE);background.setVisibility(View.VISIBLE);if(visible&&token==wallpaperGeneration)main.postDelayed(rotate,1500);});
@@ -313,9 +318,7 @@ public final class MainActivity extends Activity {
             catch(IOException|RuntimeException ex){android.util.Log.e("QuietHome","Background load failed: "+entry.name,ex);}
             final Bitmap ready=bitmap;if(ready!=null)main.post(()->{
                 if(isDestroyed()||!visible||token!=wallpaperGeneration){ready.recycle();return;}Bitmap previous=currentWallpaper;currentWallpaper=ready;
-                // A root drawable also covers firmware-specific ImageView/layout issues.
-                BitmapDrawable drawable=new BitmapDrawable(getResources(),ready);drawable.setGravity(Gravity.FILL);
-                root.setBackground(drawable);background.setImageBitmap(ready);background.invalidate();
+                background.setImageBitmap(ready);background.invalidate();
                 if(previous!=null&&previous!=ready&&!previous.isRecycled())previous.recycle();android.util.Log.i("QuietHome","Background applied: "+entry.name+" view="+background.getWidth()+"x"+background.getHeight());
                 main.postDelayed(rotate,Math.max(30,prefs.getInt("wallpaperSeconds",300))*1000L);
             });
@@ -446,22 +449,42 @@ public final class MainActivity extends Activity {
         settingRow(content,"Videoton","Standardmäßig bleibt der Bildschirmschoner leise",sound?"An":"Aus",()->{prefs.edit().putBoolean("screensaverSound",!sound).apply();screensaverSettings();});
         paragraph(content,"Medien werden lokal vom TV-Ordner Quiet Home/Screensaver gelesen und zugleich als Hintergrund verwendet. Die Synchronisierung kopiert neue Dateien dorthin, ohne sie in die Launcher-App einzubauen.");
     }
+    private void acceptYouTubeConfig(Intent intent,boolean notify){
+        if(intent==null||!intent.getBooleanExtra("quietSetup",false))return;
+        if(intent.getBooleanExtra("youtubeBridgeClear",false)){
+            YouTubeBridgeStore.clear(this);if(notify)toast("YouTube-Verbindung entfernt.");return;
+        }
+        String endpoint=intent.getStringExtra("youtubeBridgeUrl"),key=intent.getStringExtra("youtubeBridgeKey");
+        if(endpoint==null&&key==null)return;
+        if(YouTubeBridgeStore.configure(this,endpoint,key)){if(notify)toast("YouTube-Verlauf eingerichtet.");}
+        else if(notify)toast("Die YouTube-Bridge-Konfiguration ist ungültig.");
+    }
+    private void youtubeSettings(){
+        boolean configured=YouTubeBridgeStore.isConfigured(this);String endpoint=YouTubeBridgeStore.endpoint(this);
+        LinearLayout content=panel("YouTube-Verlauf",configured?"Privater Raspberry-Pi-Dienst eingerichtet":"Noch nicht eingerichtet",this::settings);
+        paragraph(content,configured?"Quiet Home holt nur Titel, Vorschaubild und Fortschritt aus deinem privaten Pi-Dienst. Das YouTube-Cookie bleibt auf dem Raspberry Pi.\n\nAdresse: "+endpoint:"Richte den privaten YouTube-Bridge-Dienst auf einem Gerät in deinem Heimnetz ein und verbinde ihn anschließend per ADB mit Quiet Home. Die Anleitung liegt im öffentlichen Repository.");
+        if(configured){
+            settingRow(content,"Jetzt aktualisieren","Weiterschauen neu vom Raspberry Pi laden",null,()->{if(settingsDialog!=null)settingsDialog.dismiss();switchPage(1);refresh();});
+            settingRow(content,"Verbindung entfernen","Entfernt nur Adresse und Zugriffsschlüssel vom Fire TV",null,()->{YouTubeBridgeStore.clear(this);refresh();youtubeSettings();});
+        }
+    }
     private void settings(){
         LinearLayout content=panel("Einstellungen","Quiet Home · dein persönlicher Startbildschirm",null);
         settingRow(content,"Apps im Dock","Apps auswählen und mit langem OK anordnen",dock.size()+" Apps",this::chooseDock);
         settingRow(content,"Hintergrund","Lokale Fotos und Videos wechseln",screensaverMediaCount()+" eigene Medien",this::wallpaperSettings);
         settingRow(content,"Bildschirmschoner","Lokale Fotos und Videos",screensaverMediaCount()+" Medien",this::screensaverSettings);
+        settingRow(content,"YouTube-Verlauf","Angefangene Videos vom privaten Raspberry Pi",YouTubeBridgeStore.isConfigured(this)?"Eingerichtet":"Aus",this::youtubeSettings);
         settingRow(content,"Weiterschauen","Optionalen lokalen Medienverlauf einrichten",null,this::mediaAccess);
         settingRow(content,"Home-Taste","Quiet Home als Startbildschirm verwenden",null,()->{prefs.edit().putBoolean("homeHelper",true).apply();try{startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));}catch(RuntimeException ex){toast("Fire OS blendet diese Einstellung aus. Nutze die mitgelieferte Einrichtung.");}});
         settingRow(content,"Amazon-Startseite","Home-Helfer für 30 Sekunden pausieren",null,()->{prefs.edit().putLong("helperPausedUntil",System.currentTimeMillis()+30000).apply();settingsDialog.dismiss();launch(new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).setPackage("com.amazon.tv.launcher"));});
         settingRow(content,"Netzwerk",networkName(),null,this::networkSettings);
         settingRow(content,"HDMI-Eingänge","Geräte auswählen und Verbindungsstatus ansehen",null,this::inputSettings);
         settingRow(content,"TV-Einstellungen","Bild, Ton und Verbindungen",null,()->openSystem(new Intent(Settings.ACTION_SETTINGS)));
-        settingRow(content,"Über Quiet Home","Version 1.10 · Lizenz und Hinweise",null,this::about);
+        settingRow(content,"Über Quiet Home","Version 2.0 · Lizenz und Hinweise",null,this::about);
     }
     private void about(){
-        LinearLayout content=panel("Quiet Home","Version 1.10",this::settings);
-        paragraph(content,"Natives Streaming-Home ohne Werbung oder Analytik. Die öffentliche Version enthält keine eingebauten Fotos, Videos oder ortsbezogenen Medien. Eigene Hintergründe und Bildschirmschoner-Medien bleiben ausschließlich lokal auf dem TV.\n\nWeiterschauen nutzt ausschließlich freigegebene Watch-Next-Einträge und optional lokal erkannten Medienverlauf. Verfügbarkeit und Episodensprünge hängen von jeder Streaming-App ab.\n\nDesign-Inspiration: Sva Launcher von clay-36. Netzwerk- und Eingangssteuerung inspiriert von cleanyourtv / Gathin23. Eigenständige Implementierung.");
+        LinearLayout content=panel("Quiet Home","Version 2.0",this::settings);
+        paragraph(content,"Natives Streaming-Home ohne Werbung oder Analytik. Die öffentliche Version enthält keine eingebauten Fotos, Videos oder ortsbezogenen Medien. Eigene Hintergründe und Bildschirmschoner-Medien bleiben ausschließlich lokal auf dem TV.\n\nWeiterschauen kombiniert freigegebene Watch-Next-Einträge, optional lokal erkannten Medienverlauf und angefangene YouTube-Videos aus einem selbst betriebenen Dienst im Heimnetz. Das YouTube-Cookie bleibt auf dem privaten Server; der Fire TV erhält nur Titel, Vorschaubild und Fortschritt.\n\nDesign-Inspiration: Sva Launcher von clay-36. Netzwerk- und Eingangssteuerung inspiriert von cleanyourtv / Gathin23. Eigenständige Implementierung.");
         settingRow(content,"Lizenz & Beiträge","Nicht-kommerzielle Nutzung und Mitwirkung",null,this::licenseInfo);settingRow(content,"Zurück zu den Einstellungen",null,"‹",this::settings);
     }
     private void licenseInfo(){
@@ -475,6 +498,7 @@ public final class MainActivity extends Activity {
         paragraph(content,"Nach deiner Freigabe merkt Quiet Home lokal Titel, Bild und Wiedergabeposition aus unterstützten Streaming-Mediensitzungen. Kein Konto-Login, kein Upload. Die Systemberechtigung heißt Benachrichtigungszugriff; Quiet Home verarbeitet nur die unterstützten Streaming-Apps.\n\nOhne Wiedergabelink öffnet eine Karte lediglich die App. Bereits vor der Einrichtung gesehene Titel werden nicht rückwirkend importiert.");
         settingRow(content,"Systemeinstellung öffnen","Zugriff erst dort selbst freigeben",null,()->{try{startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS));}catch(RuntimeException ex){toast("Fire OS blendet diese Einstellung aus. Die mitgelieferte Einrichtung bietet einen separaten optionalen Schritt.");}});
     }
+    @Override public boolean dispatchKeyEvent(KeyEvent event){if(diagnosticMode)return true;return super.dispatchKeyEvent(event);}
     @Override public boolean onKeyDown(int key,KeyEvent event){if(key==KeyEvent.KEYCODE_MENU){settings();return true;}return super.onKeyDown(key,event);}
     @Override public void onBackPressed(){if(settingsDialog!=null){settingsDialog.dismiss();return;}if(page!=0){switchPage(0);if(firstCard!=null)firstCard.requestFocus();}else if(firstCard!=null)firstCard.requestFocus();}
 }

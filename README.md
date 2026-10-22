@@ -11,6 +11,8 @@ Quiet Home is a fast, minimal launcher and local screensaver for Android TV and 
 - Wi-Fi status, HDMI/input shortcuts, and a matching settings interface.
 - Optional Home-button accessibility helper and boot start for Fire OS devices that do not honor third-party launchers normally.
 - Optional local media-session history. It does not synchronize streaming accounts.
+- Optional self-hosted YouTube Continue Watching bridge for unfinished videos.
+- Photo and video backgrounds are fitted to the screen without cropping their content.
 
 The default dock contains package identifiers for Netflix, Disney+, Paramount+, YouTube, Prime Video, and Jellyfin. Their icons are loaded at runtime from installed applications; this repository contains no streaming-service logos or application assets.
 
@@ -18,7 +20,13 @@ The default dock contains package identifiers for Netflix, Disney+, Paramount+, 
 
 This repository contains no bundled photographs, videos, location-specific media, screenshots, device backups, IP addresses, signing keys, or TV diagnostics. Until a user supplies local media on their own TV, Quiet Home uses its neutral built-in color background. Personal screensaver media is never included in the source tree or APK.
 
-Quiet Home has no Internet permission. Launcher preferences, optional media history, and user-supplied background choices remain on the TV. See [`PRIVACY.md`](PRIVACY.md).
+Quiet Home 2.0 requests Internet access only for the optional, explicitly configured YouTube bridge and its HTTPS thumbnail URLs. The YouTube cookie remains on the user's private server and is never stored in the APK or Android app. Launcher preferences, optional media history, and user-supplied background choices remain on the TV. See [`PRIVACY.md`](PRIVACY.md).
+
+## Optional YouTube Continue Watching
+
+The self-hosted bridge under [`youtube-bridge/`](youtube-bridge/) can show unfinished YouTube videos in Continue Watching. It runs on a Raspberry Pi or another trusted LAN host, keeps the YouTube session cookie there, and exposes only sanitized metadata through a key-protected endpoint.
+
+After installing Quiet Home 2.0, follow [`youtube-bridge/README.md`](youtube-bridge/README.md). The provided PowerShell setup script transfers secrets directly over SSH and never writes them into this repository or the APK.
 
 ## Build on Windows
 

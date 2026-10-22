@@ -4,6 +4,15 @@
 *.keystore
 *.p12
 *signing-password*
+*.pem
+*.har
+*.netlog
+youtube.cookie
+youtube.identity.json
+access.key
+.env
+.env.*
+**/data/
 
 # Build output
 dist/

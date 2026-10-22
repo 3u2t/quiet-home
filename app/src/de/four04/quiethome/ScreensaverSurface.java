@@ -42,7 +42,7 @@ final class ScreensaverSurface extends FrameLayout {
         preferVideo=startWithVideo;
         prefs=context.getSharedPreferences("quiet",Context.MODE_PRIVATE);
         video=new QuietVideoView(context,"screensaver");video.setVisibility(GONE);addView(video,new FrameLayout.LayoutParams(-1,-1));
-        image=new ImageView(context);image.setScaleType(ImageView.ScaleType.CENTER_CROP);addView(image,new FrameLayout.LayoutParams(-1,-1));
+        image=new ImageView(context);image.setScaleType(ImageView.ScaleType.FIT_CENTER);image.setBackgroundColor(Color.BLACK);addView(image,new FrameLayout.LayoutParams(-1,-1));
         View shade=new View(context);shade.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x66000000,0x00000000,0x33000000}));addView(shade,new FrameLayout.LayoutParams(-1,-1));
         clockBlock=new LinearLayout(context);clockBlock.setOrientation(LinearLayout.VERTICAL);clockBlock.setPadding(dp(18),dp(14),dp(18),dp(14));
         GradientDrawable glass=new GradientDrawable();glass.setColor(0x4a10191d);glass.setCornerRadius(dp(18));glass.setStroke(dp(1),0x55ffffff);clockBlock.setBackground(glass);

@@ -28,15 +28,15 @@ final class QuietVideoView extends TextureView implements TextureView.SurfaceTex
         if(path==null||!isAvailable())return;stopPlayer();final MediaPlayer next=new MediaPlayer();player=next;
         try{
             next.setDataSource(path);Surface surface=new Surface(getSurfaceTexture());next.setSurface(surface);surface.release();next.setLooping(looping);
-            next.setOnVideoSizeChangedListener((media,width,height)->crop(width,height));
-            next.setOnPreparedListener(media->{if(token!=generation||media!=player)return;if(muted)media.setVolume(0f,0f);crop(media.getVideoWidth(),media.getVideoHeight());media.start();if(ready!=null)ready.run();});
+            next.setOnVideoSizeChangedListener((media,width,height)->fit(width,height));
+            next.setOnPreparedListener(media->{if(token!=generation||media!=player)return;if(muted)media.setVolume(0f,0f);fit(media.getVideoWidth(),media.getVideoHeight());media.start();if(ready!=null)ready.run();});
             next.setOnCompletionListener(media->{if(token==generation&&media==player&&complete!=null)complete.run();});
             next.setOnErrorListener((media,what,extra)->{if(token==generation&&failed!=null)failed.run();return true;});next.prepareAsync();
         }catch(Exception ex){android.util.Log.w("QuietHome","Local video could not start: "+path,ex);stopPlayer();if(token==generation&&failed!=null)failed.run();}
     }
-    private void crop(int videoWidth,int videoHeight){if(videoWidth<=0||videoHeight<=0||getWidth()<=0||getHeight()<=0)return;float video=(float)videoWidth/videoHeight,view=(float)getWidth()/getHeight(),scaleX=1f,scaleY=1f;if(video>view)scaleX=video/view;else scaleY=view/video;Matrix matrix=new Matrix();matrix.setScale(scaleX,scaleY,getWidth()/2f,getHeight()/2f);setTransform(matrix);}
+    private void fit(int videoWidth,int videoHeight){if(videoWidth<=0||videoHeight<=0||getWidth()<=0||getHeight()<=0)return;float video=(float)videoWidth/videoHeight,view=(float)getWidth()/getHeight(),scaleX=1f,scaleY=1f;if(video>view)scaleY=view/video;else scaleX=video/view;Matrix matrix=new Matrix();matrix.setScale(scaleX,scaleY,getWidth()/2f,getHeight()/2f);setTransform(matrix);}
     @Override public void onSurfaceTextureAvailable(SurfaceTexture surface,int width,int height){if(path!=null)startPlayer(generation);}
-    @Override public void onSurfaceTextureSizeChanged(SurfaceTexture surface,int width,int height){if(player!=null)crop(player.getVideoWidth(),player.getVideoHeight());}
+    @Override public void onSurfaceTextureSizeChanged(SurfaceTexture surface,int width,int height){if(player!=null)fit(player.getVideoWidth(),player.getVideoHeight());}
     @Override public boolean onSurfaceTextureDestroyed(SurfaceTexture surface){stopPlayer();return true;}
     @Override public void onSurfaceTextureUpdated(SurfaceTexture surface){if(firstFrameReported||path==null||player==null)return;try{if(player.isPlaying()){firstFrameReported=true;android.util.Log.i("QuietHome","Local video frame rendered: "+role+" "+new java.io.File(path).getName());}}catch(RuntimeException ignored){}}
 }

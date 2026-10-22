@@ -11,7 +11,7 @@ import org.json.*;
 import java.io.*;
 import java.util.*;
 
-/** Uses public TV-provider rows and optional media-session metadata only. No account scraping. */
+/** Combines public TV-provider rows, local media sessions and a private LAN YouTube bridge. */
 final class ResumeStore {
     static final Set<String> STREAMING = new HashSet<>(Arrays.asList(
         "com.netflix.ninja", "com.disney.disneyplus", "com.cbs.ca", "com.amazon.firetv.youtube",
@@ -67,6 +67,9 @@ final class ResumeStore {
         } catch (RuntimeException ex) {
             result.providerStatus = "Dieser Fire-TV-Anbieter stellt keine lesbaren Watch-Next-Daten bereit.";
         }
+        YouTubeBridgeStore.Result youtube = YouTubeBridgeStore.load(context);
+        for (Item item : youtube.items) if (!items.containsKey(item.key())) items.put(item.key(), item);
+        if (!youtube.status.isEmpty()) result.providerStatus = result.providerStatus.isEmpty() ? youtube.status : result.providerStatus + " " + youtube.status;
         synchronized (ResumeStore.class) {
             try {
                 JSONArray history = new JSONArray(context.getSharedPreferences("quiet", Context.MODE_PRIVATE).getString("history", "[]"));

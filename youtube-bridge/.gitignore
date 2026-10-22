@@ -1,0 +1,9 @@
+data/
+.env
+.env.*
+*.cookie
+*.key
+*.har
+*.netlog
+node_modules/
+npm-debug.log*
