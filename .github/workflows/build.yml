@@ -10,13 +10,13 @@ permissions:
 
 jobs:
   youtube-bridge-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: youtube-bridge
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: 22
       - name: Install bridge dependencies
@@ -27,7 +27,7 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Prepare official Android toolchain
         shell: pwsh
         run: .\PrepareBuild.ps1
@@ -35,7 +35,7 @@ jobs:
         shell: pwsh
         run: .\Build.ps1
       - name: Upload test APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: QuietHome-test-apk
           path: dist/QuietHome.apk
